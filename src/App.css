@@ -1,0 +1,23 @@
+#root {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.02) 0%, rgba(30, 41, 59, 0.02) 100%);
+}
+
+
+/* Professional color scheme */
+
+:root {
+    color-scheme: light dark;
+}
+
+
+/* Smooth transitions */
+
+* {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+}

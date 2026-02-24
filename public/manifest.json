@@ -1,0 +1,60 @@
+{
+    "name": "MNR IP Phone Directory",
+    "short_name": "IP Phones",
+    "description": "MNR Group IP Phone Directory - Search and browse extension numbers",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#1b5a96",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [{
+            "src": "/favicon.ico",
+            "sizes": "64x64",
+            "type": "image/x-icon"
+        },
+        {
+            "src": "/favicon.ico",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/favicon.ico",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/favicon.ico",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [{
+            "src": "/favicon.ico",
+            "sizes": "192x192",
+            "type": "image/png",
+            "form_factor": "narrow"
+        },
+        {
+            "src": "/favicon.ico",
+            "sizes": "512x512",
+            "type": "image/png",
+            "form_factor": "wide"
+        }
+    ],
+    "categories": ["business", "productivity"],
+    "shortcuts": [{
+        "name": "Search Directory",
+        "short_name": "Search",
+        "description": "Search for extensions and phone numbers",
+        "url": "/?search=",
+        "icons": [{
+            "src": "/favicon.ico",
+            "sizes": "192x192"
+        }]
+    }]
+}
