@@ -16,7 +16,7 @@ export function useOfficeDetail(officeId?: string) {
 
     const [officeRes, deptsRes, entriesRes] = await Promise.all([
       supabase.from('offices').select('*').eq('id', officeId).single(),
-      supabase.from('departments').select('*').eq('office_id', officeId).order('sort_order').order('name'),
+      supabase.from('departments').select('*').eq('office_id', officeId).order('sort_order').order('created_at'),
       supabase.from('phone_entries').select('*, departments!inner(office_id)').order('extension'),
     ]);
 

@@ -7,7 +7,7 @@ export function useDepartments(officeId?: string) {
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
-    let q = supabase.from('departments').select('*').order('sort_order').order('name');
+    let q = supabase.from('departments').select('*').order('sort_order').order('created_at');
     if (officeId) q = q.eq('office_id', officeId);
     const { data } = await q;
     if (data) setDepartments(data);

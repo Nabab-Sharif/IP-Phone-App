@@ -20,8 +20,19 @@ const OfficeCard = ({ office, onClick, showAll = false, departments = [] }: Offi
     return departments.find(d => d.id === departmentId)?.name || '';
   };
 
+  // Sort entries by department order, then by extension
+  const sortedEntries = [...office.previewEntries].sort((a, b) => {
+    const deptA = departments.find(d => d.id === a.department_id);
+    const deptB = departments.find(d => d.id === b.department_id);
+    const sortOrderDiff = (deptA?.sort_order || 0) - (deptB?.sort_order || 0);
+    if (sortOrderDiff !== 0) return sortOrderDiff;
+    const createdAtDiff = new Date(deptA?.created_at || 0).getTime() - new Date(deptB?.created_at || 0).getTime();
+    if (createdAtDiff !== 0) return createdAtDiff;
+    return 0;
+  });
+
   // Show 3 extensions by default, or all extensions when showAll is true
-  const entriesToShow = showAll ? office.previewEntries : office.previewEntries.slice(0, 3);
+  const entriesToShow = showAll ? sortedEntries : sortedEntries.slice(0, 3);
   return (
     <div
       onClick={onClick}

@@ -7,7 +7,7 @@ export function useOffices() {
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
-    const { data } = await supabase.from('offices').select('*').order('sort_order').order('name');
+    const { data } = await supabase.from('offices').select('*').order('sort_order').order('created_at');
     if (data) setOffices(data);
     setLoading(false);
   }, []);

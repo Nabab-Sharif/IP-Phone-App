@@ -291,10 +291,10 @@ const Admin = () => {
 
   const openAddCode = () => { setDialogType('access_code'); setEditId(null); setForm({ code: '', label: '', role: 'user', office_id: '', department_id: '' }); setDialogOpen(true); };
   const openEditCode = (c: AccessCode) => { setDialogType('access_code'); setEditId(c.id); setForm({ code: c.code, label: c.label || '', role: c.role, is_active: c.is_active ? 'true' : 'false', office_id: c.office_id || '', department_id: c.department_id || '' }); setDialogOpen(true); };
-  const openAddOffice = () => { setDialogType('office'); setEditId(null); setForm({ name: '', description: '' }); setDialogOpen(true); };
-  const openEditOffice = (o: any) => { setDialogType('office'); setEditId(o.id); setForm({ name: o.name, description: o.description || '' }); setDialogOpen(true); };
-  const openAddDept = () => { setDialogType('department'); setEditId(null); setForm({ name: '', description: '' }); setDialogOpen(true); };
-  const openEditDept = (d: any) => { setDialogType('department'); setEditId(d.id); setForm({ name: d.name, description: d.description || '' }); setDialogOpen(true); };
+  const openAddOffice = () => { setDialogType('office'); setEditId(null); setForm({ name: '', description: '', sort_order: '0' }); setDialogOpen(true); };
+  const openEditOffice = (o: any) => { setDialogType('office'); setEditId(o.id); setForm({ name: o.name, description: o.description || '', sort_order: String(o.sort_order || 0) }); setDialogOpen(true); };
+  const openAddDept = () => { setDialogType('department'); setEditId(null); setForm({ name: '', description: '', sort_order: '0' }); setDialogOpen(true); };
+  const openEditDept = (d: any) => { setDialogType('department'); setEditId(d.id); setForm({ name: d.name, description: d.description || '', sort_order: String(d.sort_order || 0) }); setDialogOpen(true); };
   const openAddEntry = () => { setDialogType('entry'); setEditId(null); setForm({ extension: '', name: '', designation: '', phone: '', email: '', status: 'active' }); setDialogOpen(true); };
   const openEditEntry = (e: any) => { setDialogType('entry'); setEditId(e.id); setForm({ extension: e.extension, name: e.name, designation: e.designation || '', phone: e.phone || '', email: e.email || '', status: e.status }); setDialogOpen(true); };
 
@@ -311,13 +311,13 @@ const Admin = () => {
     } else if (dialogType === 'office') {
       if (!form.name?.trim()) { toast.error('Office name দিন'); return; }
       const { error } = editId
-        ? await updateOffice(editId, { name: form.name, description: form.description || null })
+        ? await updateOffice(editId, { name: form.name, description: form.description || null, sort_order: parseInt(form.sort_order || '0') })
         : await createOffice(form.name, form.description || undefined);
       if (error) toast.error(error); else toast.success(editId ? 'Updated!' : 'Created!');
     } else if (dialogType === 'department') {
       if (!form.name?.trim()) { toast.error('Department name দিন'); return; }
       const { error } = editId
-        ? await updateDept(editId, { name: form.name, description: form.description || null })
+        ? await updateDept(editId, { name: form.name, description: form.description || null, sort_order: parseInt(form.sort_order || '0') })
         : await createDept(selectedOfficeId, form.name, form.description || undefined);
       if (error) toast.error(error); else toast.success(editId ? 'Updated!' : 'Created!');
     } else {
@@ -349,7 +349,7 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      <main className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4">
           <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
             <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary" /> Admin Panel
@@ -959,28 +959,56 @@ const Admin = () => {
               <Button onClick={openAddOffice} size="sm"><Plus className="w-4 h-4 mr-1" /> Add Office</Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {offices.map(office => (
-                <div key={office.id} className="bg-card rounded-xl border border-border card-border-left p-5 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 flex flex-col">
-                  <div className="flex-1 cursor-pointer" onClick={() => { setSelectedOfficeId(office.id); setTab('departments'); }}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Building2 className="w-6 h-6 text-primary flex-shrink-0" />
-                      <h4 className="text-lg font-bold text-primary truncate">{office.name}</h4>
+              {allOfficesWithStats.map(office => (
+                <div key={office.id} className="bg-gradient-to-br from-card to-card/90 rounded-xl border border-border p-0 overflow-hidden hover:shadow-lg hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 flex flex-col group cursor-pointer">
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 dark:from-blue-900/20 dark:to-cyan-900/20 border-b border-border p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="p-2 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-colors">
+                          <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <h4 className="text-base font-bold text-foreground group-hover:text-primary transition-colors truncate">{office.name}</h4>
+                      </div>
                     </div>
-                    {office.description && <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{office.description}</p>}
+                    {office.description && <p className="text-xs text-muted-foreground ml-11 line-clamp-1">{office.description}</p>}
                   </div>
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEditOffice(office)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { setDeleteConfirmId(office.id); setDeleteConfirmType('office'); }}><Trash2 className="w-4 h-4" /></Button>
+
+                  {/* Content */}
+                  <div className="p-4 flex-1" onClick={() => { setSelectedOfficeId(office.id); setTab('departments'); }}>
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-3 border border-green-200/30 dark:border-green-800/30">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
+                          <span className="text-xs font-semibold text-muted-foreground">Departments</span>
+                        </div>
+                        <p className="text-2xl font-bold text-foreground">{office.departmentCount}</p>
+                      </div>
+                      <div className="bg-gradient-to-br from-orange-500/10 to-yellow-500/10 dark:from-orange-900/20 dark:to-yellow-900/20 rounded-lg p-3 border border-orange-200/30 dark:border-orange-800/30">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Phone className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                          <span className="text-xs font-semibold text-muted-foreground">Extensions</span>
+                        </div>
+                        <p className="text-2xl font-bold text-foreground">{office.entryCount}</p>
+                      </div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => { setSelectedOfficeId(office.id); setTab('departments'); }}>
-                      <span className="text-sm mr-1">Departments</span>
-                      <ChevronRight className="w-4 h-4" />
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="border-t border-border/50 px-4 py-3 bg-muted/30 flex items-center justify-between gap-2">
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEditOffice(office); }} className="h-8 w-8 p-0" title="Edit"><Pencil className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="sm" className="text-destructive h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(office.id); setDeleteConfirmType('office'); }} title="Delete"><Trash2 className="w-4 h-4" /></Button>
+                    </div>
+                    <Button variant="default" size="sm" onClick={() => { setSelectedOfficeId(office.id); setTab('departments'); }} className="text-xs">
+                      <span>View</span>
+                      <ChevronRight className="w-3.5 h-3.5 ml-1" />
                     </Button>
                   </div>
                 </div>
               ))}
-              {offices.length === 0 && (
+              {allOfficesWithStats.length === 0 && (
                 <div className="col-span-full text-center py-12 text-muted-foreground bg-card rounded-xl border border-border">
                   <Building2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
                   <p>No offices yet. Add your first office!</p>
@@ -1002,23 +1030,44 @@ const Admin = () => {
               </div>
               <Button onClick={openAddDept} size="sm"><Plus className="w-4 h-4 mr-1" /> Add Department</Button>
             </div>
-            <div className="grid gap-3">
-              {departments.map(dept => (
-                <div key={dept.id} className="bg-card rounded-xl border border-border p-4 flex items-center justify-between hover:shadow-sm transition-shadow">
-                  <div className="flex-1 cursor-pointer" onClick={() => { setSelectedDeptId(dept.id); setTab('entries'); }}>
-                    <div className="flex items-center gap-2">
-                      <Users className="w-5 h-5 text-primary" />
-                      <span className="font-semibold text-foreground">{dept.name}</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {departments.map(dept => {
+                const deptExtCount = entries.filter(e => e.department_id === dept.id).length;
+                return (
+                  <div key={dept.id} className="bg-gradient-to-br from-card to-card/90 rounded-xl border border-border p-0 overflow-hidden hover:shadow-lg hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 flex flex-col group cursor-pointer" onClick={() => { setSelectedDeptId(dept.id); setTab('entries'); }}>
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 dark:from-purple-900/20 dark:to-pink-900/20 border-b border-border p-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-purple-500/20 rounded-lg group-hover:bg-purple-500/30 transition-colors">
+                          <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <h4 className="text-base font-bold text-foreground group-hover:text-primary transition-colors truncate">{dept.name}</h4>
+                      </div>
+                      {dept.description && <p className="text-xs text-muted-foreground ml-11 line-clamp-1">{dept.description}</p>}
                     </div>
-                    {dept.description && <p className="text-sm text-muted-foreground ml-7">{dept.description}</p>}
+
+                    {/* Content */}
+                    <div className="p-4 flex-1 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-4xl font-bold text-primary mb-2">{deptExtCount}</div>
+                        <div className="text-sm font-semibold text-muted-foreground">Extension{deptExtCount !== 1 ? 's' : ''}</div>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="border-t border-border/50 px-4 py-3 bg-muted/30 flex items-center justify-between gap-2">
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEditDept(dept); }} className="h-8 w-8 p-0" title="Edit"><Pencil className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="sm" className="text-destructive h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(dept.id); setDeleteConfirmType('department'); }} title="Delete"><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                      <Button variant="default" size="sm" onClick={() => { setSelectedDeptId(dept.id); setTab('entries'); }} className="text-xs">
+                        <span>View</span>
+                        <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1 flex-shrink-0">
-                    <Button variant="ghost" size="sm" onClick={() => openEditDept(dept)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { setDeleteConfirmId(dept.id); setDeleteConfirmType('department'); }}><Trash2 className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="sm" onClick={() => { setSelectedDeptId(dept.id); setTab('entries'); }}><ChevronRight className="w-4 h-4" /></Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {departments.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground bg-card rounded-xl border border-border">
                   <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -1196,6 +1245,13 @@ const Admin = () => {
                     <Label>Description</Label>
                     <Input value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Optional description" className="mt-1" />
                   </div>
+                  {(dialogType === 'office' || dialogType === 'department') && (
+                    <div>
+                      <Label>Order (Display Position)</Label>
+                      <Input type="number" value={form.sort_order || '0'} onChange={e => setForm({ ...form, sort_order: e.target.value })} placeholder="0 = First" className="mt-1" />
+                      <p className="text-xs text-muted-foreground mt-1">Lower number = Earlier position (0 = First)</p>
+                    </div>
+                  )}
                 </>
               )}
             </div>

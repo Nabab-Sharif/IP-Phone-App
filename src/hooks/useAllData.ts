@@ -51,8 +51,8 @@ export function useAllData(search?: string, statusFilter?: string) {
     if (isOnline()) {
       try {
         const [officesRes, deptsRes, entriesRes] = await Promise.all([
-          supabase.from('offices').select('*').order('sort_order').order('name'),
-          supabase.from('departments').select('*'),
+          supabase.from('offices').select('*').order('sort_order').order('created_at'),
+          supabase.from('departments').select('*').order('sort_order').order('created_at'),
           supabase.from('phone_entries').select('*').order('extension'),
         ]);
 

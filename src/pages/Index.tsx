@@ -29,9 +29,14 @@ const Index = () => {
     ? Array.from(new Set(
         departments
           .filter(d => selectedOffice.previewEntries.some(e => e.department_id === d.id))
+          .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
           .map(d => d.name)
-      )).sort()
-    : Array.from(new Set(departments.map(d => d.name))).sort();
+      ))
+    : Array.from(new Set(
+        departments
+          .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+          .map(d => d.name)
+      ));
 
   // Get department IDs that match the selected department name (across all offices)
   const matchingDeptIds = selectedDeptName !== 'all'
@@ -40,7 +45,7 @@ const Index = () => {
   
   // Filter offices: respect office selection regardless of department selection
   let filteredOffices = selectedOffices.length === 0
-    ? offices
+    ? [...offices].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
     : offices.filter(office => selectedOffices.includes(office.id));
   
   const finalOffices = filteredOffices.map(office => {
@@ -56,7 +61,7 @@ const Index = () => {
       previewEntries: filteredEntries,
       entryCount: filteredEntries.length,
     };
-  }).filter(office => office.entryCount > 0);
+  });
 
   const hasFilters = search.trim() !== '' || selectedOffices.length > 0 || selectedDeptName !== 'all';
 

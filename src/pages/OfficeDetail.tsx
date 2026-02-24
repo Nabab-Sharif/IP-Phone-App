@@ -20,7 +20,7 @@ const OfficeDetail = () => {
   const { office, departments, loading } = useOfficeDetail(officeId);
 
   const filteredDepts = useMemo(() => {
-    let result = departments;
+    let result = [...departments].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
     
     // Filter by department if selected
     if (departmentFilter !== 'all') {
@@ -105,7 +105,7 @@ const OfficeDetail = () => {
                     </SelectTrigger>
                     <SelectContent align="start" className="w-44">
                       <SelectItem value="all">All Departments</SelectItem>
-                      {departments.map(dept => (
+                      {[...departments].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).map(dept => (
                         <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                       ))}
                     </SelectContent>
