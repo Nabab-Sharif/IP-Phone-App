@@ -38,6 +38,15 @@ const getEmailLink = (email: string): string => {
 const ExtensionTable = ({ entries, title, departments = [] }: ExtensionTableProps) => {
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
 
+  // Filter entries to only count those with extension numbers
+  const entriesWithExtension = entries.filter(entry => entry.extension?.trim());
+  // Sort entries: first with extensions, then without
+  const allEntries = [...entries].sort((a, b) => {
+    const aHasExt = a.extension?.trim() ? 1 : 0;
+    const bHasExt = b.extension?.trim() ? 1 : 0;
+    return bHasExt - aHasExt; // Extensions first
+  });
+
   const getDepartmentName = (departmentId: string): string => {
     return departments.find(d => d.id === departmentId)?.name || 'N/A';
   };
@@ -52,18 +61,22 @@ const ExtensionTable = ({ entries, title, departments = [] }: ExtensionTableProp
   return (
     <>
       <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
-        <div className="header-gradient px-6 py-6 relative overflow-hidden">
+        <div className="header-gradient px-4 sm:px-6 py-2.5 sm:py-4 relative overflow-hidden">
           <div className="absolute inset-0 opacity-10" style={{backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 1px, transparent 1px)', backgroundSize: '50px 50px'}}></div>
           <div className="relative">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white">{title}</h2>
-            <p className="text-sm text-white/80 mt-2">{entries.length} Extensions</p>
+            <h2 className="text-lg sm:text-xl font-bold text-white">{title}</h2>
+            <div className="flex gap-4 mt-0.5">
+              <p className="text-xs text-white/80">{entriesWithExtension.length} Extensions</p>
+              <p className="text-xs text-white/80">•</p>
+              <p className="text-xs text-white/80">{new Set(allEntries.filter(e => e.name?.trim()).map(e => e.name)).size} Users</p>
+            </div>
           </div>
         </div>
         
         {/* Desktop Card View */}
         <div className="hidden md:block p-6">
           <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {entries.map(entry => (
+            {allEntries.map(entry => (
               <div
                 key={entry.id}
                 className="bg-white dark:bg-slate-700 rounded-2xl border border-slate-100 dark:border-slate-600 p-4 hover:border-orange-300 dark:hover:border-orange-400 hover:shadow-2xl transition-all duration-300 group flex flex-col h-full"
@@ -71,12 +84,14 @@ const ExtensionTable = ({ entries, title, departments = [] }: ExtensionTableProp
                 {/* Header - Extension Left, Info Right */}
                 <div className="flex items-start justify-between gap-2 mb-3 pb-3 border-b border-slate-100 dark:border-slate-600">
                   {/* Extension Badge */}
-                  <div className="bg-gradient-to-br from-orange-500 to-amber-600 dark:from-orange-600 dark:to-amber-700 text-white px-2.5 py-1.5 rounded-lg flex-shrink-0 shadow-lg">
-                    <span className="font-bold text-sm block">Ext. {entry.extension}</span>
-                  </div>
+                  {entry.extension?.trim() && (
+                    <div className="bg-gradient-to-br from-orange-500 to-amber-600 dark:from-orange-600 dark:to-amber-700 text-white px-2.5 py-1.5 rounded-lg flex-shrink-0 shadow-lg">
+                      <span className="font-bold text-sm block">{entry.extension}</span>
+                    </div>
+                  )}
                   
                   {/* Name and Details on Right */}
-                  <div className="flex-1 min-w-0">
+                  <div className={`${entry.extension?.trim() ? 'flex-1' : 'w-full'} min-w-0`}>
                     <p className="text-xs font-bold text-slate-900 dark:text-slate-50 leading-tight line-clamp-2">{entry.name}</p>
                     {entry.designation && (
                       <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 line-clamp-1">{entry.designation}</p>
@@ -163,7 +178,7 @@ const ExtensionTable = ({ entries, title, departments = [] }: ExtensionTableProp
         {/* Mobile Card View */}
         <div className="md:hidden p-3 sm:p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {entries.map(entry => (
+            {allEntries.map(entry => (
               <div
                 key={entry.id}
                 className="bg-white dark:bg-slate-700 rounded-2xl border border-slate-100 dark:border-slate-600 p-3 hover:border-orange-300 dark:hover:border-orange-400 hover:shadow-lg transition-all duration-300 flex flex-col h-full"
@@ -171,12 +186,14 @@ const ExtensionTable = ({ entries, title, departments = [] }: ExtensionTableProp
                 {/* Header - Extension Left, Info Right */}
                 <div className="flex items-start justify-between gap-2 mb-3 pb-3 border-b border-slate-100 dark:border-slate-600">
                   {/* Extension Badge */}
-                  <div className="bg-gradient-to-br from-orange-500 to-amber-600 dark:from-orange-600 dark:to-amber-700 text-white px-2 py-1.5 rounded-lg flex-shrink-0 shadow-sm">
-                    <span className="font-bold text-sm block">Ext. {entry.extension}</span>
-                  </div>
+                  {entry.extension?.trim() && (
+                    <div className="bg-gradient-to-br from-orange-500 to-amber-600 dark:from-orange-600 dark:to-amber-700 text-white px-2 py-1.5 rounded-lg flex-shrink-0 shadow-sm">
+                      <span className="font-bold text-sm block">{entry.extension}</span>
+                    </div>
+                  )}
                   
                   {/* Name and Details on Right */}
-                  <div className="flex-1 min-w-0">
+                  <div className={`${entry.extension?.trim() ? 'flex-1' : 'w-full'} min-w-0`}>
                     <p className="text-xs font-bold text-slate-900 dark:text-slate-50 leading-tight line-clamp-2">{entry.name}</p>
                     {entry.designation && (
                       <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 line-clamp-1">{entry.designation}</p>

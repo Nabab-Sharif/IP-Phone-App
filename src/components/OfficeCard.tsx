@@ -59,23 +59,23 @@ const OfficeCard = ({ office, onClick, showAll = false, departments = [] }: Offi
         </span>
       </div>
 
-      <div className="space-y-2 w-full">
+      <div className="space-y-0.5 w-full">
         {entriesToShow.map((entry) => (
-            <div key={entry.id} className="flex flex-col gap-1 p-2 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10 transition-colors hover:border-orange-400 dark:hover:border-orange-500">
-              <div className="flex items-center gap-2">
-                <span className="text-orange-600 dark:text-orange-400 font-bold text-sm min-w-[40px] bg-orange-100 dark:bg-orange-900 px-2 py-1 rounded">{entry.extension}</span>
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-50 truncate">{entry.name}</p>
+            <div key={entry.id} className="flex flex-col gap-0 p-1 rounded border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10 transition-colors hover:border-orange-400 dark:hover:border-orange-500">
+              <div className="flex items-center gap-1">
+                <span className="text-orange-600 dark:text-orange-400 font-bold text-xs min-w-[28px] bg-orange-100 dark:bg-orange-900 px-1 py-0.5 rounded text-center">{entry.extension}</span>
+              <p className="text-xs font-medium text-slate-900 dark:text-slate-50 truncate">{entry.name}</p>
             </div>
             {getDepartmentName(entry.department_id) && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 ml-2">{getDepartmentName(entry.department_id)}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 ml-0.5">{getDepartmentName(entry.department_id)}</p>
             )}
           </div>
         ))}
       </div>
 
       {!showAll && office.entryCount > 3 && (
-        <p className="text-orange-600 dark:text-orange-400 text-sm mt-3 font-semibold">
-          +{office.entryCount - 3} more extensions
+        <p className="text-orange-600 dark:text-orange-400 text-xs mt-1 font-semibold">
+          +{office.entryCount - 3} more
         </p>
       )}
     </div>

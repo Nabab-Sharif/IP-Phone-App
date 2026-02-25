@@ -321,11 +321,9 @@ const Admin = () => {
         : await createDept(selectedOfficeId, form.name, form.description || undefined);
       if (error) toast.error(error); else toast.success(editId ? 'Updated!' : 'Created!');
     } else {
-      if (!form.extension?.trim()) { toast.error('Extension number দিন'); return; }
-      if (!form.name?.trim()) { toast.error('Name দিন'); return; }
       const { error } = editId
-        ? await updateEntry(editId, { extension: form.extension, name: form.name, designation: form.designation || '', phone: form.phone || null, email: form.email || null, status: form.status })
-        : await createEntry({ department_id: selectedDeptId, extension: form.extension, name: form.name, designation: form.designation || '', phone: form.phone || undefined, email: form.email || undefined, status: form.status });
+        ? await updateEntry(editId, { extension: form.extension || '', name: form.name || '', designation: form.designation || '', phone: form.phone || null, email: form.email || null, status: form.status })
+        : await createEntry({ department_id: selectedDeptId, extension: form.extension || '', name: form.name || '', designation: form.designation || '', phone: form.phone || undefined, email: form.email || undefined, status: form.status });
       if (error) toast.error(error); else toast.success(editId ? 'Updated!' : 'Created!');
     }
     setDialogOpen(false);
@@ -1205,11 +1203,11 @@ const Admin = () => {
               ) : dialogType === 'entry' ? (
                 <>
                   <div>
-                    <Label>Extension *</Label>
+                    <Label>Extension</Label>
                     <Input value={form.extension || ''} onChange={e => setForm({ ...form, extension: e.target.value })} placeholder="e.g. 501" className="mt-1" />
                   </div>
                   <div>
-                    <Label>Name *</Label>
+                    <Label>Name</Label>
                     <Input value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Full name" className="mt-1" />
                   </div>
                   <div>
@@ -1413,7 +1411,7 @@ const Admin = () => {
                   </p>
                   <div className="bg-muted/50 p-3 rounded-lg border border-border">
                     <p className="text-xs text-muted-foreground mb-1">Phone Entry</p>
-                    <p className="font-bold text-lg">{phoneEntries.find(p => p.id === deleteConfirmId)?.phone_number || 'Unknown'}</p>
+                    <p className="font-bold text-lg">{entries.find(p => p.id === deleteConfirmId)?.phone || 'Unknown'}</p>
                   </div>
                 </>
               )}

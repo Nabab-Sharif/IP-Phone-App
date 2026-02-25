@@ -37,8 +37,8 @@ const OfficeDetail = () => {
       ...d,
       entries: d.entries.filter(e => {
         const matchesSearch = !search.trim() || (
-          e.extension.toLowerCase().includes(q) ||
-          e.name.toLowerCase().includes(q) ||
+          (e.extension || '').toLowerCase().includes(q) ||
+          (e.name || '').toLowerCase().includes(q) ||
           (e.designation || '').toLowerCase().includes(q)
         );
         return matchesSearch;
@@ -133,7 +133,7 @@ const OfficeDetail = () => {
         {selectedDept ? (
           <ExtensionTable entries={selectedDept.entries} title={`${office?.name} — ${selectedDept.name}`} departments={departments} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {filteredDepts.map(dept => (
               <DepartmentCard
                 key={dept.id}

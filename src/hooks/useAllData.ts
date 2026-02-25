@@ -14,7 +14,7 @@ function buildOfficeStats(allOffices: Office[], allDepts: Department[], allEntri
   if (statusFilter && statusFilter !== 'all') entries = entries.filter(e => e.status === statusFilter);
   if (search?.trim()) {
     const q = search.toLowerCase();
-    entries = entries.filter(e => e.extension.toLowerCase().includes(q) || e.name.toLowerCase().includes(q) || (e.designation || '').toLowerCase().includes(q));
+    entries = entries.filter(e => (e.extension || '').toLowerCase().includes(q) || (e.name || '').toLowerCase().includes(q) || (e.designation || '').toLowerCase().includes(q));
   }
 
   const deptToOffice = new Map<string, string>();
