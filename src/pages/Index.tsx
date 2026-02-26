@@ -48,20 +48,22 @@ const Index = () => {
     ? [...offices].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
     : offices.filter(office => selectedOffices.includes(office.id));
   
-  const finalOffices = filteredOffices.map(office => {
-    let filteredEntries = office.previewEntries;
+  const finalOffices = filteredOffices
+    .map(office => {
+      let filteredEntries = office.previewEntries;
 
-    // Apply selected department filter by name (matching all dept IDs with that name)
-    if (selectedDeptName !== 'all') {
-      filteredEntries = filteredEntries.filter(entry => matchingDeptIds.includes(entry.department_id));
-    }
+      // Apply selected department filter by name (matching all dept IDs with that name)
+      if (selectedDeptName !== 'all') {
+        filteredEntries = filteredEntries.filter(entry => matchingDeptIds.includes(entry.department_id));
+      }
 
-    return {
-      ...office,
-      previewEntries: filteredEntries,
-      entryCount: filteredEntries.length,
-    };
-  });
+      return {
+        ...office,
+        previewEntries: filteredEntries,
+        entryCount: filteredEntries.length,
+      };
+    })
+    .filter(office => office.entryCount > 0);
 
   const hasFilters = search.trim() !== '' || selectedOffices.length > 0 || selectedDeptName !== 'all';
 

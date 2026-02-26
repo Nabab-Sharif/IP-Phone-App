@@ -14,9 +14,10 @@ import { usePhoneEntries } from '@/hooks/usePhoneEntries';
 import { useAccessCodes, AccessCode } from '@/hooks/useAccessCodes';
 import { useAllData } from '@/hooks/useAllData';
 import { getDeviceName, getBrowserName, getLocationName, getDateTimeInfo } from '@/lib/deviceInfo';
-import { Shield, Plus, Pencil, Trash2, Building2, Users, Phone, ArrowLeft, ChevronRight, KeyRound, Clock, Search, Wifi, WifiOff, Smartphone, MapPin, Calendar, Circle } from 'lucide-react';
+import { Shield, Plus, Pencil, Trash2, Building2, Users, Phone, ArrowLeft, ChevronRight, KeyRound, Clock, Search, Wifi, WifiOff, Smartphone, MapPin, Calendar, Circle, X, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { isOnline } from '@/lib/offlineDb';
+import { exportOfficesToCSV, exportOfficesToJSON, importOfficesFromJSON } from '@/lib/officeExportImport';
 
 type Tab = 'access_codes' | 'offices' | 'departments' | 'entries';
 
@@ -111,6 +112,8 @@ const Admin = () => {
   const [codeSearch, setCodeSearch] = useState('');
   const [codeRoleFilter, setCodeRoleFilter] = useState('all');
   const [codeStatusFilter, setCodeStatusFilter] = useState('all');
+  const [codeOfficeFilter, setCodeOfficeFilter] = useState('all');
+  const [codeDeptFilter, setCodeDeptFilter] = useState('all');
 
   // Detail page navigation
   const [viewMode, setViewMode] = useState<'overview' | 'office' | 'department' | 'user'>('overview');
@@ -134,6 +137,7 @@ const Admin = () => {
   const [selectedAccessCode, setSelectedAccessCode] = useState<AccessCode | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteConfirmType, setDeleteConfirmType] = useState<'access_code' | 'office' | 'department' | 'entry' | null>(null);
+  const [importOfficeDialogOpen, setImportOfficeDialogOpen] = useState(false);
   const [accessCodeDetails, setAccessCodeDetails] = useState({
     deviceName: '',
     browserName: '',
@@ -259,8 +263,10 @@ const Admin = () => {
     }
     if (codeRoleFilter !== 'all') result = result.filter(c => c.role === codeRoleFilter);
     if (codeStatusFilter !== 'all') result = result.filter(c => codeStatusFilter === 'active' ? c.is_active : !c.is_active);
+    if (codeOfficeFilter !== 'all') result = result.filter(c => c.office_id === codeOfficeFilter);
+    if (codeDeptFilter !== 'all') result = result.filter(c => c.department_id === codeDeptFilter);
     return result;
-  }, [codes, codeSearch, codeRoleFilter, codeStatusFilter]);
+  }, [codes, codeSearch, codeRoleFilter, codeStatusFilter, codeOfficeFilter, codeDeptFilter]);
 
   if (authLoading) {
     return (
@@ -288,6 +294,14 @@ const Admin = () => {
       </div>
     );
   }
+
+  const clearAccessFilters = () => {
+    setCodeSearch('');
+    setCodeRoleFilter('all');
+    setCodeStatusFilter('all');
+    setCodeOfficeFilter('all');
+    setCodeDeptFilter('all');
+  };
 
   const openAddCode = () => { setDialogType('access_code'); setEditId(null); setForm({ code: '', label: '', role: 'user', office_id: '', department_id: '' }); setDialogOpen(true); };
   const openEditCode = (c: AccessCode) => { setDialogType('access_code'); setEditId(c.id); setForm({ code: c.code, label: c.label || '', role: c.role, is_active: c.is_active ? 'true' : 'false', office_id: c.office_id || '', department_id: c.department_id || '' }); setDialogOpen(true); };
@@ -336,6 +350,43 @@ const Admin = () => {
     else if (type === 'department') result = await removeDept(id);
     else result = await removeEntry(id);
     if (result.error) toast.error(result.error); else toast.success('Deleted!');
+  };
+
+  const handleImportOffices = async (file: File) => {
+    try {
+      const data = await importOfficesFromJSON(file);
+      
+      // Import offices first
+      for (const office of data.offices) {
+        const existingOffice = offices.find(o => o.id === office.id);
+        if (existingOffice) {
+          await updateOffice(office.id, { name: office.name, description: office.description, sort_order: office.sort_order });
+        } else {
+          await createOffice(office.name, office.description);
+        }
+      }
+      
+      // Then import departments
+      for (const dept of data.departments) {
+        const existingDept = allDepartments.find(d => d.id === dept.id);
+        if (existingDept) {
+          await updateDept(dept.id, { name: dept.name, description: dept.description, sort_order: dept.sort_order });
+        }
+      }
+      
+      // Finally import entries
+      for (const entry of data.entries) {
+        const existingEntry = entries.find(e => e.id === entry.id);
+        if (existingEntry) {
+          await updateEntry(entry.id, { extension: entry.extension, name: entry.name, designation: entry.designation, phone: entry.phone, email: entry.email, status: entry.status });
+        }
+      }
+      
+      toast.success('Import completed successfully!');
+      setImportOfficeDialogOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Import failed');
+    }
   };
 
   const selectedOffice = offices.find(o => o.id === selectedOfficeId);
@@ -753,7 +804,37 @@ const Admin = () => {
           <div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4">
               <h3 className="text-lg font-semibold">Access IDs ({filteredCodes.length})</h3>
-              <Button onClick={openAddCode} size="sm"><Plus className="w-4 h-4 mr-1" /> Add Access ID</Button>
+              <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                <Select value={codeOfficeFilter} onValueChange={setCodeOfficeFilter}>
+                  <SelectTrigger className="w-full sm:w-40 h-10 text-xs rounded-lg bg-card"><SelectValue placeholder="Filter Office" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Offices</SelectItem>
+                    {allOfficesWithStats.map(office => (
+                      <SelectItem key={office.id} value={office.id}>{office.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={codeDeptFilter} onValueChange={setCodeDeptFilter}>
+                  <SelectTrigger className="w-full sm:w-40 h-10 text-xs rounded-lg bg-card"><SelectValue placeholder="Filter Dept" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {allDepartments.map(dept => (
+                      <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(codeOfficeFilter !== 'all' || codeDeptFilter !== 'all') && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={clearAccessFilters}
+                    className="text-xs text-destructive hover:text-destructive whitespace-nowrap"
+                  >
+                    <X className="w-4 h-4 mr-1" /> Clear
+                  </Button>
+                )}
+                <Button onClick={openAddCode} size="sm" className="text-xs whitespace-nowrap"><Plus className="w-4 h-4 mr-1" /> Add Access ID</Button>
+              </div>
             </div>
 
             {/* Search & Filters */}
@@ -835,14 +916,14 @@ const Admin = () => {
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-primary" /> Office & Department Overview
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {allOfficesWithStats.map(office => {
                   const officeDepts = allDepartments.filter(d => d.office_id === office.id);
                   const isExpanded = expandedOfficeId === office.id;
                   return (
                     <div 
                       key={office.id} 
-                      className="bg-card rounded-xl border border-border p-5 hover:shadow-lg hover:border-primary/50 hover:bg-card/95 transition-all duration-300 cursor-pointer group"
+                      className="bg-card rounded-lg border border-border p-3.5 hover:shadow-md hover:border-primary/60 hover:bg-card/98 active:scale-[0.98] transition-all duration-200 cursor-pointer group"
                       onClick={() => { setSelectedOfficeForView(office.id); setViewMode('office'); }}
                     >
                       <div
@@ -852,34 +933,34 @@ const Admin = () => {
                           setExpandedOfficeId(isExpanded ? null : office.id);
                         }}
                       >
-                      <div className="flex items-center gap-2 mb-3">
-                          <Building2 className="w-5 h-5 text-primary flex-shrink-0 group-hover:scale-110 transition-transform" />
-                          <h4 className="font-bold text-foreground truncate group-hover:text-primary transition-colors">{office.name}</h4>
+                      <div className="flex items-center gap-2 mb-2.5">
+                          <Building2 className="w-4.5 h-4.5 text-primary flex-shrink-0 group-hover:scale-110 transition-transform" />
+                          <h4 className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">{office.name}</h4>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 text-sm">
-                          <span className="flex items-center gap-1.5 bg-muted px-2.5 py-1 rounded-lg">
-                            <Users className="w-3.5 h-3.5 text-primary" />
-                            <span className="font-semibold text-foreground">{office.departmentCount}</span>
-                            <span className="text-xs text-muted-foreground">Depts</span>
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                          <span className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
+                            <Users className="w-3 h-3 text-primary" />
+                            <span className="font-semibold">{office.departmentCount}</span>
+                            <span className="text-muted-foreground">Depts</span>
                           </span>
-                          <span className="flex items-center gap-1.5 bg-muted px-2.5 py-1 rounded-lg">
-                            <Phone className="w-3.5 h-3.5 text-primary" />
-                            <span className="font-semibold text-foreground">{office.entryCount}</span>
-                            <span className="text-xs text-muted-foreground">Ext</span>
+                          <span className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
+                            <Phone className="w-3 h-3 text-primary" />
+                            <span className="font-semibold">{office.entryCount}</span>
+                            <span className="text-muted-foreground">Ext</span>
                           </span>
-                          <span className="flex items-center gap-1.5 bg-primary/10 px-2.5 py-1 rounded-lg">
-                            <KeyRound className="w-3.5 h-3.5 text-primary" />
-                            <span className="font-semibold text-foreground">{codes.filter(c => c.office_id === office.id).length}</span>
-                            <span className="text-xs text-muted-foreground">Users</span>
+                          <span className="flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-md">
+                            <KeyRound className="w-3 h-3 text-primary" />
+                            <span className="font-semibold">{codes.filter(c => c.office_id === office.id).length}</span>
+                            <span className="text-muted-foreground">Users</span>
                           </span>
                         </div>
-                        <div className="flex justify-end mt-2">
-                          <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                        <div className="flex justify-end mt-1.5">
+                          <ChevronRight className={`w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-all ${isExpanded ? 'rotate-90' : ''}`} />
                         </div>
                       </div>
 
                       {isExpanded && officeDepts.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-border space-y-3">
+                        <div className="mt-2 pt-2 border-t border-border space-y-2">
                           {officeDepts.map(dept => {
                             const deptEntryCount = office.previewEntries.filter(e => e.department_id === dept.id).length;
                             const deptUserCount = codes.filter(c => c.department_id === dept.id).length;
@@ -888,48 +969,45 @@ const Admin = () => {
                               <div key={dept.id}>
                                 {/* Department Header */}
                                 <div 
-                                  className="flex items-center justify-between bg-muted/50 hover:bg-muted/80 hover:border-primary/30 rounded-lg px-3 py-2 mb-2 transition-all duration-200 border border-transparent cursor-pointer group"
+                                  className="flex items-center justify-between bg-muted/40 hover:bg-muted/70 hover:border-primary/40 rounded-md px-2.5 py-1.5 transition-all duration-200 border border-transparent cursor-pointer group"
                                   onClick={() => { setSelectedDeptForView(dept.id); setSelectedOfficeForView(office.id); setViewMode('department'); }}
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <Users className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all" />
-                                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{dept.name}</span>
+                                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                    <Users className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all flex-shrink-0" />
+                                    <span className="text-xs font-medium text-foreground group-hover:text-primary transition-colors truncate">{dept.name}</span>
                                   </div>
-                                  <div className="flex gap-2">
-                                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                                  <div className="flex gap-1.5 flex-shrink-0">
+                                    <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap">
                                       {deptEntryCount} ext
                                     </span>
-                                    <span className="text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full font-medium">
-                                      {deptUserCount} users
+                                    <span className="text-xs bg-accent text-accent-foreground px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap">
+                                      {deptUserCount} user
                                     </span>
                                   </div>
                                 </div>
 
                                 {/* Access IDs for this Department */}
                                 {deptAccessCodes.length > 0 && (
-                                  <div className="ml-2 space-y-1">
+                                  <div className="ml-1 space-y-0.5 mt-1">
                                     {deptAccessCodes.map(accessCode => (
                                       <div 
                                         key={accessCode.id}
-                                        className="flex items-center justify-between bg-gradient-to-r from-primary/5 to-primary/10 hover:from-primary/20 hover:to-primary/30 hover:shadow-md hover:border-primary/50 rounded px-2 py-1.5 transition-all duration-200 cursor-pointer border border-primary/20 text-xs group"
+                                        className="flex items-center justify-between bg-gradient-to-r from-primary/4 to-primary/8 hover:from-primary/15 hover:to-primary/22 rounded px-1.5 py-0.75 transition-all duration-150 cursor-pointer border border-primary/15 hover:border-primary/35 text-xs group"
                                         onClick={() => { setSelectedUserForView(accessCode); setSelectedOfficeForView(office.id); setSelectedDeptForView(dept.id); setViewMode('user'); }}
                                       >
-                                        <div className="flex items-center gap-1.5 min-w-0">
+                                        <div className="flex items-center gap-1 min-w-0 flex-1">
                                           <div className="relative flex-shrink-0">
-                                            <KeyRound className="w-3 h-3 text-primary group-hover:scale-125 transition-transform" />
+                                            <KeyRound className="w-2.5 h-2.5 text-primary group-hover:scale-110 transition-transform" />
                                             <Circle 
-                                              className={`w-1.5 h-1.5 absolute -top-0.5 -right-0.5 fill-current ${isUserOnline(accessCode.last_active) ? 'text-green-500' : 'text-red-500'}`}
+                                              className={`w-1 h-1 absolute -top-0.5 -right-0.5 fill-current ${isUserOnline(accessCode.last_active) ? 'text-green-500' : 'text-red-500'}`}
                                             />
                                           </div>
-                                          <span className="font-mono font-bold text-foreground truncate group-hover:text-primary transition-colors">{accessCode.code}</span>
-                                          {accessCode.label && <span className="text-muted-foreground group-hover:text-primary/70 transition-colors">({accessCode.label})</span>}
+                                          <span className="font-mono font-semibold text-foreground truncate group-hover:text-primary transition-colors">{accessCode.code}</span>
+                                          {accessCode.label && <span className="text-muted-foreground group-hover:text-primary/60 transition-colors truncate text-[11px]">({accessCode.label})</span>}
                                         </div>
-                                        <div className="flex gap-1 flex-shrink-0">
-                                          <span className={`px-1 py-0.5 rounded-sm text-xs font-medium ${isUserOnline(accessCode.last_active) ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}`}>
-                                            {isUserOnline(accessCode.last_active) ? 'on' : 'off'}
-                                          </span>
-                                          <span className={`px-1.5 py-0.5 rounded-sm font-medium group-hover:shadow-sm transition-all ${accessCode.role === 'admin' ? 'bg-destructive/10 text-destructive group-hover:bg-destructive/20' : 'bg-primary/10 text-primary group-hover:bg-primary/20'}`}>
-                                            {accessCode.role}
+                                        <div className="flex gap-0.5 flex-shrink-0">
+                                          <span className={`px-1 py-0.25 rounded text-[10px] font-semibold leading-tight ${isUserOnline(accessCode.last_active) ? 'bg-green-500/20 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-red-500/20 text-red-700 dark:bg-red-900/40 dark:text-red-300'}`}>
+                                            {isUserOnline(accessCode.last_active) ? 'online' : 'offline'}
                                           </span>
                                         </div>
                                       </div>
@@ -952,9 +1030,51 @@ const Admin = () => {
         {/* OFFICES TAB - Card design */}
         {tab === 'offices' && (
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4">
               <h3 className="text-lg font-semibold">All Offices/Units</h3>
-              <Button onClick={openAddOffice} size="sm"><Plus className="w-4 h-4 mr-1" /> Add Office</Button>
+              <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => exportOfficesToCSV(
+                    allOfficesWithStats,
+                    allDepartments,
+                    allOfficesWithStats.flatMap(o => o.previewEntries)
+                  )} 
+                  className="text-xs whitespace-nowrap"
+                  title="Export as CSV"
+                >
+                  <Download className="w-4 h-4 mr-1" /> CSV
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => exportOfficesToJSON(
+                    allOfficesWithStats,
+                    allDepartments,
+                    allOfficesWithStats.flatMap(o => o.previewEntries)
+                  )} 
+                  className="text-xs whitespace-nowrap"
+                  title="Export as JSON"
+                >
+                  <Download className="w-4 h-4 mr-1" /> JSON
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setImportOfficeDialogOpen(true)} 
+                  className="text-xs whitespace-nowrap"
+                  title="Import from JSON"
+                >
+                  <Upload className="w-4 h-4 mr-1" /> Import
+                </Button>
+
+                <Button onClick={openAddOffice} size="sm" className="text-xs whitespace-nowrap">
+                  <Plus className="w-4 h-4 mr-1" /> Add Office
+                </Button>
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {allOfficesWithStats.map(office => (
@@ -1435,6 +1555,29 @@ const Admin = () => {
                 Delete
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Import Offices Dialog */}
+        <Dialog open={importOfficeDialogOpen} onOpenChange={setImportOfficeDialogOpen}>
+          <DialogContent className="z-50">
+            <DialogHeader>
+              <DialogTitle>Import Offices & Data</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground mb-4">Upload a JSON file previously exported from this application.</p>
+              <Input 
+                type="file" 
+                accept=".json" 
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleImportOffices(file);
+                  }
+                }}
+                className="cursor-pointer"
+              />
+            </div>
           </DialogContent>
         </Dialog>
           </div>
