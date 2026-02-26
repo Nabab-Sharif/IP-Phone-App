@@ -63,7 +63,8 @@ const Index = () => {
         entryCount: filteredEntries.length,
       };
     })
-    .filter(office => office.entryCount > 0);
+    // Only filter by entryCount if department filter is active (not showing all departments)
+    .filter(office => selectedDeptName === 'all' || office.entryCount > 0);
 
   const hasFilters = search.trim() !== '' || selectedOffices.length > 0 || selectedDeptName !== 'all';
 

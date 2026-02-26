@@ -25,16 +25,19 @@ export function useDepartments(officeId?: string) {
 
   const create = async (office_id: string, name: string, description?: string) => {
     const { error } = await supabase.from('departments').insert({ office_id, name, description });
+    if (!error) await fetch();
     return { error: error?.message || null };
   };
 
   const update = async (id: string, updates: Partial<Department>) => {
     const { error } = await supabase.from('departments').update(updates).eq('id', id);
+    if (!error) await fetch();
     return { error: error?.message || null };
   };
 
   const remove = async (id: string) => {
     const { error } = await supabase.from('departments').delete().eq('id', id);
+    if (!error) await fetch();
     return { error: error?.message || null };
   };
 

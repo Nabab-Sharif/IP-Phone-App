@@ -25,16 +25,19 @@ export function usePhoneEntries(departmentId?: string) {
 
   const create = async (entry: { department_id: string; extension: string; name: string; designation?: string; phone?: string; email?: string; status?: string }) => {
     const { error } = await supabase.from('phone_entries').insert(entry);
+    if (!error) await fetch();
     return { error: error?.message || null };
   };
 
   const update = async (id: string, updates: Partial<PhoneEntry>) => {
     const { error } = await supabase.from('phone_entries').update(updates).eq('id', id);
+    if (!error) await fetch();
     return { error: error?.message || null };
   };
 
   const remove = async (id: string) => {
     const { error } = await supabase.from('phone_entries').delete().eq('id', id);
+    if (!error) await fetch();
     return { error: error?.message || null };
   };
 

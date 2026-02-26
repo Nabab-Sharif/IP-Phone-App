@@ -74,14 +74,10 @@ export async function clearSession() {
   await removeItem('session', 'current_user');
 }
 
-// Data cache
-export async function saveDataCache(offices: any[], depts: any[], entries: any[]) {
-  await putItem('data', 'cached_data', { offices, depts, entries, ts: Date.now() });
-}
-
-export async function loadDataCache(): Promise<{ offices: any[]; depts: any[]; entries: any[]; ts: number } | null> {
-  return getItem('data', 'cached_data');
-}
+// Data cache - REMOVED - Only using Supabase now
+// export async function saveDataCache(offices: any[], depts: any[], entries: any[]) { }
+// export async function loadDataCache(): Promise<...> { }
+// export async function clearDataCache() { }
 
 // Check online status
 export function isOnline(): boolean {

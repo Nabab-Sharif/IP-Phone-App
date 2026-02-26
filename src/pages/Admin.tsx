@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { broadcastDataChange } from '@/lib/broadcastSync';
 import { useOffices } from '@/hooks/useOffices';
 import { useDepartments } from '@/hooks/useDepartments';
 import { usePhoneEntries } from '@/hooks/usePhoneEntries';
@@ -317,28 +318,28 @@ const Admin = () => {
       if (!form.code?.trim()) { toast.error('Access ID দিন'); return; }
       if (editId) {
         const { error } = await updateCode(editId, { code: form.code, label: form.label || null, role: form.role as 'admin' | 'user', is_active: form.is_active !== 'false', office_id: form.office_id || null, department_id: form.department_id || null });
-        if (error) toast.error(error); else toast.success('Updated!');
+        if (error) toast.error(error); else { toast.success('Updated!'); broadcastDataChange('access_code'); }
       } else {
         const { error } = await createCode(form.code, form.label || '', form.role as 'admin' | 'user', form.office_id || null, form.department_id || null);
-        if (error) toast.error(error); else toast.success('Created!');
+        if (error) toast.error(error); else { toast.success('Created!'); broadcastDataChange('access_code'); }
       }
     } else if (dialogType === 'office') {
       if (!form.name?.trim()) { toast.error('Office name দিন'); return; }
       const { error } = editId
         ? await updateOffice(editId, { name: form.name, description: form.description || null, sort_order: parseInt(form.sort_order || '0') })
         : await createOffice(form.name, form.description || undefined);
-      if (error) toast.error(error); else toast.success(editId ? 'Updated!' : 'Created!');
+      if (error) toast.error(error); else { toast.success(editId ? 'Updated!' : 'Created!'); broadcastDataChange('office'); }
     } else if (dialogType === 'department') {
       if (!form.name?.trim()) { toast.error('Department name দিন'); return; }
       const { error } = editId
         ? await updateDept(editId, { name: form.name, description: form.description || null, sort_order: parseInt(form.sort_order || '0') })
         : await createDept(selectedOfficeId, form.name, form.description || undefined);
-      if (error) toast.error(error); else toast.success(editId ? 'Updated!' : 'Created!');
+      if (error) toast.error(error); else { toast.success(editId ? 'Updated!' : 'Created!'); broadcastDataChange('department'); }
     } else {
       const { error } = editId
         ? await updateEntry(editId, { extension: form.extension || '', name: form.name || '', designation: form.designation || '', phone: form.phone || null, email: form.email || null, status: form.status })
         : await createEntry({ department_id: selectedDeptId, extension: form.extension || '', name: form.name || '', designation: form.designation || '', phone: form.phone || undefined, email: form.email || undefined, status: form.status });
-      if (error) toast.error(error); else toast.success(editId ? 'Updated!' : 'Created!');
+      if (error) toast.error(error); else { toast.success(editId ? 'Updated!' : 'Created!'); broadcastDataChange('entry'); }
     }
     setDialogOpen(false);
   };
@@ -349,7 +350,7 @@ const Admin = () => {
     else if (type === 'office') result = await removeOffice(id);
     else if (type === 'department') result = await removeDept(id);
     else result = await removeEntry(id);
-    if (result.error) toast.error(result.error); else toast.success('Deleted!');
+    if (result.error) toast.error(result.error); else { toast.success('Deleted!'); broadcastDataChange(type as any); }
   };
 
   const handleImportOffices = async (file: File) => {
@@ -383,6 +384,9 @@ const Admin = () => {
       }
       
       toast.success('Import completed successfully!');
+      broadcastDataChange('office');
+      broadcastDataChange('department');
+      broadcastDataChange('entry');
       setImportOfficeDialogOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Import failed');

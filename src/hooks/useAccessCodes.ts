@@ -34,16 +34,19 @@ export function useAccessCodes() {
 
   const create = async (code: string, label: string, role: 'admin' | 'user', office_id?: string | null, department_id?: string | null) => {
     const { error } = await supabase.from('access_codes').insert({ code, label, role, office_id: office_id || null, department_id: department_id || null });
+    if (!error) await fetch();
     return { error: error?.message || null };
   };
 
   const update = async (id: string, updates: Partial<AccessCode>) => {
     const { error } = await supabase.from('access_codes').update(updates).eq('id', id);
+    if (!error) await fetch();
     return { error: error?.message || null };
   };
 
   const remove = async (id: string) => {
     const { error } = await supabase.from('access_codes').delete().eq('id', id);
+    if (!error) await fetch();
     return { error: error?.message || null };
   };
 

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Office, Department, PhoneEntry } from '@/types/phone';
-import { saveDataCache, loadDataCache, isOnline } from '@/lib/offlineDb';
+import { isOnline } from '@/lib/offlineDb';
+import { initBroadcastChannel, onDataChange } from '@/lib/broadcastSync';
 
 interface OfficeWithStats extends Office {
   departmentCount: number;
@@ -48,54 +49,72 @@ export function useAllData(search?: string, statusFilter?: string) {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    if (isOnline()) {
-      try {
-        const [officesRes, deptsRes, entriesRes] = await Promise.all([
-          supabase.from('offices').select('*').order('sort_order').order('created_at'),
-          supabase.from('departments').select('*').order('sort_order').order('created_at'),
-          supabase.from('phone_entries').select('*').order('extension'),
-        ]);
+    try {
+      const [officesRes, deptsRes, entriesRes] = await Promise.all([
+        supabase.from('offices').select('*').order('sort_order').order('created_at'),
+        supabase.from('departments').select('*').order('sort_order').order('created_at'),
+        supabase.from('phone_entries').select('*').order('extension'),
+      ]);
 
-        const allOffices = officesRes.data || [];
-        const allDepts = deptsRes.data || [];
-        const allEntries = entriesRes.data || [];
+      const allOffices = officesRes.data || [];
+      const allDepts = deptsRes.data || [];
+      const allEntries = entriesRes.data || [];
 
-        // Save to IndexedDB for offline
-        await saveDataCache(allOffices, allDepts, allEntries);
-
-        setDepartments(allDepts);
-        setOffices(buildOfficeStats(allOffices, allDepts, allEntries, search, statusFilter));
-      } catch {
-        // Fall back to IndexedDB
-        const cached = await loadDataCache();
-        if (cached) {
-          setDepartments(cached.depts);
-          setOffices(buildOfficeStats(cached.offices, cached.depts, cached.entries, search, statusFilter));
-        }
-      }
-    } else {
-      // Offline: load from IndexedDB
-      const cached = await loadDataCache();
-      if (cached) {
-        setDepartments(cached.depts);
-        setOffices(buildOfficeStats(cached.offices, cached.depts, cached.entries, search, statusFilter));
-      }
+      setDepartments(allDepts);
+      setOffices(buildOfficeStats(allOffices, allDepts, allEntries, search, statusFilter));
+    } catch (error) {
+      console.error('Failed to fetch data from Supabase:', error);
     }
     setLoading(false);
   }, [search, statusFilter]);
 
   useEffect(() => {
     fetchData();
-    if (isOnline()) {
-      const ch1 = supabase.channel('all-offices').on('postgres_changes', { event: '*', schema: 'public', table: 'offices' }, () => fetchData()).subscribe();
-      const ch2 = supabase.channel('all-depts').on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, () => fetchData()).subscribe();
-      const ch3 = supabase.channel('all-entries').on('postgres_changes', { event: '*', schema: 'public', table: 'phone_entries' }, () => fetchData()).subscribe();
-      return () => {
-        supabase.removeChannel(ch1);
-        supabase.removeChannel(ch2);
-        supabase.removeChannel(ch3);
-      };
-    }
+    
+    // Initialize broadcast channel for cross-tab sync
+    initBroadcastChannel();
+    
+    // Listen for data changes from other tabs
+    onDataChange(() => {
+      setTimeout(() => fetchData(), 300);
+    });
+
+    // Real-time subscriptions with delayed refetch
+    const handleChange = () => {
+      setTimeout(() => fetchData(), 300);
+    };
+
+    const ch1 = supabase.channel('all-offices').on('postgres_changes', { event: '*', schema: 'public', table: 'offices' }, handleChange).subscribe();
+    const ch2 = supabase.channel('all-depts').on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, handleChange).subscribe();
+    const ch3 = supabase.channel('all-entries').on('postgres_changes', { event: '*', schema: 'public', table: 'phone_entries' }, handleChange).subscribe();
+
+    // Periodic refetch as backup (every 3 seconds) to ensure data stays fresh
+    const intervalId = setInterval(() => {
+      fetchData();
+    }, 3000);
+
+    // Page visibility change - refetch when tab becomes visible again
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        setTimeout(() => fetchData(), 300);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Window focus - refetch when window regains focus
+    const handleFocus = () => {
+      setTimeout(() => fetchData(), 300);
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      supabase.removeChannel(ch1);
+      supabase.removeChannel(ch2);
+      supabase.removeChannel(ch3);
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [fetchData]);
 
   return { offices, departments, loading, refetch: fetchData };
